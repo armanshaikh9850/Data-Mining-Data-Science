@@ -1,0 +1,372 @@
+Ass6 
+
+Set A
+
+1. Write a python program to implement k-means algorithm to build prediction model
+(Use Credit Card Dataset CC GENERAL.csv Download from kaggle.com) 
+
+
+
+
+
+
+import numpy as nm
+import matplotlib.pyplot as mtp
+import pandas as pd
+
+# Load the dataset
+df = pd.read_csv('CC GENERAL.csv')
+
+# Display the first few rows of the dataset
+print(df.head())
+
+# Check for missing values and drop rows with NaN values
+df.dropna(inplace=True)
+
+# Selecting relevant features for clustering (you can choose which features to use)
+features = df.drop(columns=['CUST_ID']).values  # Using .values to get numpy array
+
+# K-Means Clustering Implementation
+def kmeans(X, k, max_iters=100):
+    # Randomly initialize the centroids
+    centroids = X[nm.random.choice(X.shape[0], k, replace=False)]
+    
+    for _ in range(max_iters):
+        # Calculate distances from data points to centroids
+        distances = nm.linalg.norm(X[:, nm.newaxis] - centroids, axis=2)
+        
+        # Assign clusters based on closest centroid
+        labels = nm.argmin(distances, axis=1)
+        
+        # Calculate new centroids
+        new_centroids = nm.array([X[labels == i].mean(axis=0) for i in range(k)])
+        
+        # If centroids do not change, break
+        if nm.all(centroids == new_centroids):
+            break
+        
+        centroids = new_centroids
+        
+    return labels, centroids
+
+# Specify the number of clusters
+k = 4  # You can adjust this based on your analysis
+
+# Run K-Means
+labels, centroids = kmeans(features, k)
+
+# Add cluster labels to the dataframe
+df['Cluster'] = labels
+
+# Display the first few rows with cluster labels
+print(df.head())
+
+# Optional: Plotting clusters (use only 2 features for visualization)
+mtp.scatter(features[:, 0], features[:, 1], c=labels, cmap='viridis', marker='o', edgecolor='k')
+mtp.scatter(centroids[:, 0], centroids[:, 1], c='red', s=200, alpha=0.75, marker='X')  # Plot centroids
+mtp.title('K-Means Clustering of Credit Card Data')
+mtp.xlabel('Feature 1')
+mtp.ylabel('Feature 2')
+mtp.show()
+
+
+
+
+
+
+
+
+
+
+
+2. Write a python program to implement hierarchical Agglomerative clustering algorithm. 
+(Download Customer.csv dataset from github.com). 
+
+
+url--->  https://gist.github.com/akuks/2e9b08cebef0181b583a1dff4a97f8a1
+
+
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.preprocessing import StandardScaler
+
+# Load the dataset directly from the URL
+url = 'Customer.csv'  # Replace with the actual URL
+df = pd.read_csv(url)
+
+# Display the first few rows of the dataset
+print(df.head())
+
+# Check for missing values
+print(df.isnull().sum())
+
+# Drop rows with missing values (if any)
+df.dropna(inplace=True)
+
+# Convert DOB to age - specify the date format
+df['DOB'] = pd.to_datetime(df['DOB'], format='%d/%m/%y %H:%M', dayfirst=True)  # Adjust the format for day first
+df['Age'] = (pd.Timestamp.now() - df['DOB']).dt.days // 365  # Calculate age in years
+
+# Select relevant features for clustering
+features = df[['Age', 'Gender']]
+
+# One-hot encode the categorical 'Gender' feature
+features_encoded = pd.get_dummies(features, columns=['Gender'], drop_first=True)
+
+# Check the resulting DataFrame after encoding
+print("Encoded Features:\n", features_encoded.head())
+print("Columns after Encoding:", features_encoded.columns.tolist())
+
+# Standardize the features
+scaler = StandardScaler()
+features_scaled = scaler.fit_transform(features_encoded)
+
+# Perform Hierarchical Agglomerative Clustering
+model = AgglomerativeClustering(n_clusters=4)  # Adjust the number of clusters as needed
+labels = model.fit_predict(features_scaled)
+
+# Add cluster labels to the original dataframe
+df['Cluster'] = labels
+
+# Display the first few rows with cluster labels
+print(df.head())
+
+# Check the unique labels
+print("Unique Cluster Labels:", df['Cluster'].unique())
+
+# Optional: Plotting the clusters (use only Age and one gender column for visualization)
+gender_column = features_encoded.columns[1]  # Assuming the first column is 'Age'
+plt.figure(figsize=(10, 6))
+plt.scatter(df['Age'], features_encoded[gender_column], c=labels, cmap='viridis', marker='o', edgecolor='k')
+plt.title('Hierarchical Agglomerative Clustering of Customers')
+plt.xlabel('Age')
+plt.ylabel(gender_column)  # Update the y-label to match the gender column
+plt.colorbar(label='Cluster')
+plt.grid(True)  # Add grid for better readability
+plt.show()
+
+# Optional: Dendrogram for visualizing hierarchical clustering
+plt.figure(figsize=(10, 6))
+from scipy.cluster.hierarchy import dendrogram, linkage
+linked = linkage(features_scaled, 'ward')
+dendrogram(linked,
+           orientation='top',
+           distance_sort='descending',
+           show_leaf_counts=True)
+plt.title('Dendrogram for Hierarchical Clustering')
+plt.xlabel('Sample Index')
+plt.ylabel('Distance')
+plt.grid(True)  # Add grid for better readability
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+Set B 
+1. Write a python program to implement k-means algorithms on a synthetic dataset.
+
+
+
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Step 1: Generate a synthetic dataset
+from sklearn.datasets import make_blobs
+
+# Generate synthetic data with 3 clusters
+n_samples = 300
+n_features = 2
+n_clusters = 3
+random_state = 42
+
+X, y = make_blobs(n_samples=n_samples, centers=n_clusters, n_features=n_features, random_state=random_state)
+
+# Convert to a DataFrame for easier manipulation
+data = pd.DataFrame(X, columns=['Feature_1', 'Feature_2'])
+
+# Step 2: Visualize the synthetic dataset
+plt.figure(figsize=(10, 6))
+plt.scatter(data['Feature_1'], data['Feature_2'], s=30)
+plt.title('Synthetic Dataset')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.grid()
+plt.show()
+
+# Step 3: Implement K-Means algorithm
+def k_means(X, n_clusters, n_iterations=100):
+    # Step 3.1: Randomly initialize the centroids
+    centroids = X.sample(n_clusters).to_numpy()
+    
+    for _ in range(n_iterations):
+        # Step 3.2: Assign clusters based on closest centroid
+        distances = np.linalg.norm(X.to_numpy()[:, np.newaxis] - centroids, axis=2)
+        labels = np.argmin(distances, axis=1)
+
+        # Step 3.3: Update centroids based on mean of assigned points
+        new_centroids = np.array([X.to_numpy()[labels == k].mean(axis=0) for k in range(n_clusters)])
+
+        # Step 3.4: Check for convergence
+        if np.all(centroids == new_centroids):
+            break
+        
+        centroids = new_centroids
+    
+    return labels, centroids
+
+# Step 4: Run K-Means algorithm
+labels, centroids = k_means(data, n_clusters)
+
+# Step 5: Visualize the clustering results
+plt.figure(figsize=(10, 6))
+plt.scatter(data['Feature_1'], data['Feature_2'], c=labels, s=30, cmap='viridis', marker='o', edgecolor='k')
+plt.scatter(centroids[:, 0], centroids[:, 1], c='red', s=200, alpha=0.75, marker='X')  # Centroids
+plt.title('K-Means Clustering Results')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.grid()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+2. Write a python program to implement hierarchical clustering algorithm. (Download 
+Wholesale customers data dataset from github.com). 
+
+url----> https://github.com/TrainingByPackt/Data-Science-with-Python/blob/master/Chapter01/Data/Wholesale%20customers%20data.csv
+
+
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
+
+# Step 1: Load the dataset
+# Replace 'path_to_your_dataset' with the actual path to your dataset
+url = 'wholesale-customer.csv'
+df = pd.read_csv(url)
+
+# Step 2: Preprocessing the data
+# Dropping non-numeric columns (Channel and Region)
+data = df.drop(['Channel', 'Region'], axis=1)
+
+# Step 3: Perform Hierarchical Clustering
+# Linkage matrix
+Z = linkage(data, method='ward')
+
+# Step 4: Plotting the Dendrogram
+plt.figure(figsize=(12, 8))
+dendrogram(Z, truncate_mode='level', p=3)
+plt.title('Dendrogram for Hierarchical Clustering')
+plt.xlabel('Customers')
+plt.ylabel('Distance')
+plt.grid()
+plt.show()
+
+# Step 5: Form clusters
+# Define the number of clusters (e.g., 3)
+n_clusters = 3
+clusters = fcluster(Z, n_clusters, criterion='maxclust')
+
+# Step 6: Add cluster labels to the original DataFrame
+df['Cluster'] = clusters
+
+# Step 7: Visualize the clusters
+# For visualization, let's plot the first two features (Fresh and Milk)
+plt.figure(figsize=(10, 6))
+plt.scatter(df['Fresh'], df['Milk'], c=df['Cluster'], cmap='viridis', s=100)
+plt.title('Hierarchical Clustering of Wholesale Customers')
+plt.xlabel('Fresh Products')
+plt.ylabel('Milk Products')
+plt.grid()
+plt.colorbar(label='Cluster')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+Set C 
+1. Write a python program to implement Agglomerative clustering on a synthetic dataset. 
+(use inbuilt Iris data set).
+
+
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.decomposition import PCA
+
+# Step 1: Load the Iris dataset
+iris = load_iris()
+X = iris.data  # Features
+y = iris.target  # True labels (for comparison)
+
+# Step 2: Perform Agglomerative Clustering
+# Choose the number of clusters (e.g., 3)
+n_clusters = 3
+agg_clustering = AgglomerativeClustering(n_clusters=n_clusters)
+clusters = agg_clustering.fit_predict(X)
+
+# Step 3: Reduce dimensions for visualization (using PCA)
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X)
+
+# Step 4: Plot the clusters
+plt.figure(figsize=(10, 6))
+plt.scatter(X_pca[:, 0], X_pca[:, 1], c=clusters, cmap='viridis', marker='o', edgecolor='k', s=100)
+plt.title('Agglomerative Clustering on Iris Dataset')
+plt.xlabel('PCA Component 1')
+plt.ylabel('PCA Component 2')
+plt.grid()
+plt.colorbar(label='Cluster Label')
+plt.show()
+
+# Optional: Compare with true labels
+plt.figure(figsize=(10, 6))
+plt.scatter(X_pca[:, 0], X_pca[:, 1], c=y, cmap='viridis', marker='o', edgecolor='k', s=100)
+plt.title('True Labels of Iris Dataset')
+plt.xlabel('PCA Component 1')
+plt.ylabel('PCA Component 2')
+plt.grid()
+plt.colorbar(label='True Label')
+plt.show()
+
+
+
+
+
+
